@@ -1,5 +1,7 @@
 # Source Code Guide
 
+[Chinese / 中文版](./README.zh-CN.md)
+
 `source-code-guide` is a Codex skill for reading unfamiliar codebases in stages instead of jumping straight into raw source.
 
 It helps an agent:
