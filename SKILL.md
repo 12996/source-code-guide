@@ -1,73 +1,100 @@
 ---
 name: source-code-guide
-description: Use when a user wants to understand an unfamiliar codebase, map major features, trace a specific feature's key call chain, keep branch-level reading context while drilling deeper, or prepare annotated code-reading material before optionally writing comments into source files.
+description: 当用户想理解一个陌生代码库、梳理主要功能、追踪某个功能的关键调用链、在持续下钻时保持分支级阅读上下文，或先生成带注解的阅读材料再决定是否写回源码注释时使用。
 ---
 
 # Source Code Guide
 
-Guide source-code reading from global structure to focused code study. Keep the user oriented, cite evidence, and avoid invented architecture.
+使用递归下钻方式引导源码阅读：先建立项目级地图，再按复杂度持续拆解功能，直到当前对象已经收敛成一条主调用链，最后再进入具体代码区域。整个过程保持用户方位感，所有判断以证据为基础，避免凭感觉虚构架构关系。
 
 ## Core Rules
 
-- Start global, then narrow one feature at a time.
-- Write reading artifacts under `docs/source-guides/<project-slug>/`.
-- Use the templates in `references/templates.md`.
-- Every confirmed call point must include a file path and line number.
-- If a line number cannot be verified, write `unlocated`. Never guess.
-- If a relationship is not direct, label it as `indirect call`, `route dispatch`, `configuration binding`, `event trigger`, or `unresolved`.
-- Put uncertain claims in `Unconfirmed Points` with a confidence label.
-- Do not modify source files by default. Ask before using `code-commenter`.
+- 先做全局项目地图，再一次只收窄一个功能。
+- 阅读产物写入 `docs/source-guides/<project-slug>/`。
+- 使用 `references/templates.md` 中的模板。
+- `00-project-map.md` 固定表示项目地图。
+- 从 `01` 开始，编号只表示阅读顺序，不再绑定固定文档语义。
+- `01+` 文档统一使用 `<编号>-<父级功能>-and-<当前功能>.md` 的命名格式。
+- 文件名里的父级功能只写直接上级对象，不要把完整祖先链全部拼进去。
+- 第一层递归文档从项目地图进入时，父级功能使用 `project`。
+- 与用户的说明、提问、总结默认使用中文。
+- 生成的阅读文档默认使用中文。
+- 只有在用户明确要求其他语言时才切换。
+- 每个已确认的调用点都必须包含文件路径和行号。
+- 如果行号无法核实，写 `unlocated`，不要猜。
+- 如果关系不是直接调用，标记为 `indirect call`、`route dispatch`、`configuration binding`、`event trigger` 或 `unresolved`。
+- 不确定的结论放入 `Unconfirmed Points`，并附上置信度。
+- 默认不要修改源码文件。只有在征得用户同意后才使用 `code-commenter`。
 
 ## Workflow
 
-1. Build `00-project-map.md`.
-2. After the user chooses a feature, build `01-feature-<feature-name>.md`.
-3. Maintain `02-feature-<feature-name>-subchain.md` as the shared branch-navigation page for that feature.
-4. When the user focuses on one code region, build `03-feature-<feature-name>-code-<topic>.md`.
-5. Ask whether the final annotated output should stay in the reading doc, go into source files, or both.
+1. 先构建 `00-project-map.md`。
+2. 用户从项目地图选定某个功能后，判断这个对象是否仍然包含并列子功能。
+3. 如果仍有并列子功能，创建下一个编号的“功能拆解文档”，继续回答“它内部还有哪些子功能、各自做什么、下一步为什么先看谁”。
+4. 如果已经没有并列子功能，只剩一条主流程，创建下一个编号的“调用链解释文档”，回答“入口在哪里、链路如何推进、每一段为下一段做了什么”。
+5. 用户继续点入调用链中的具体阶段、文件或代码区域时，创建下一个编号的“代码精读文档”。
+6. 每次进入下一层前，都重新判断当前对象是“仍需功能拆解”还是“已经可以转为调用链解释”；不要因为编号增加就假设必须进入代码层。
+7. 询问最终注解产物是只保留在阅读文档中、写入源码，还是两者都做。
 
 ## Document Rules
 
 ### `00-project-map.md`
 
-Include a short project introduction, feature groups, entry evidence, recommended reading order, and unconfirmed points.
+包含简短项目介绍、功能分组、入口证据、推荐阅读顺序和未确认点。每个功能项都要回答“它做什么”以及“为什么它值得成为后续 `01` 的候选入口”。
 
-### `01-feature-<feature-name>.md`
+### `NN-<parent>-and-<current>.md`
 
-Include a short feature introduction, feature goal, user-facing entry, key modules, main call-chain overview, suggested next branches, and evidence notes.
+从 `01` 开始的所有文档都使用统一编号格式，但文档类型由当前对象的复杂度决定，而不是由编号决定。递归文档分为三类：
 
-### `02-feature-<feature-name>-subchain.md`
+- 功能拆解文档：当前对象仍有并列子功能时使用。文档要写清“有哪些并列子功能、各自做什么、它们之间如何衔接、下一步该进入哪个子功能”。
+- 调用链解释文档：当前对象已经没有并列子功能，只剩一条主流程时使用。文档要写清“入口、关键阶段、出口，以及每一步如何为下一步提供条件”。
+- 代码精读文档：用户聚焦到调用链中的某个阶段、文件或代码区域时使用。文档要写清“这段代码具体做什么、它在链路中的作用、它为后续阶段做了什么”。
 
-Store all branch drill-down sections in one file. Use `## to_<branch-name>` headings. For each branch, include its purpose, key call points, path-and-line references, relationship type, confidence, drill-down guidance, and sibling branches worth reading next.
+不要把“功能拆解文档”写成只有标题的目录，也不要在对象仍存在并列子功能时过早切换到调用链或代码精读。
 
-### `03-feature-<feature-name>-code-<topic>.md`
+## Transition Rules
 
-Start with a rough summary, explain what the user should know before reading the code, provide annotated reading material, map it back to the parent branch, and record the persistence decision.
+- 只要当前对象下面还能拆出并列子功能，就继续生成下一层“功能拆解文档”。
+- 当前对象已经不能再拆出并列子功能，只剩一条主流程时，切换到“调用链解释文档”。
+- 当前对象虽然步骤很多，但如果它们属于同一条主流程的不同阶段，仍然算一条调用链，不要再误拆成功能地图。
+- 只有在用户明确点入调用链中的某一段、某个阶段或某个代码区域后，才切换到“代码精读文档”。
+- 泛化的“继续梳理”“继续往下看”不构成自动替用户选择某个链路阶段并进入代码精读的许可。
+- “建议继续阅读”只是一种导航提示，不代表当前层已经解释完成。
+- 用户一旦指定了功能或要求“继续梳理”，默认继续下钻，直到当前问题被讲透，或者用户明确要求停在总览层。
 
 ## Evidence Discipline
 
-- Do not infer features from directory names alone.
-- Back feature claims with routes, command registration, module declarations, or other entry evidence.
-- Do not treat naming similarity as proof of a call relationship.
-- Do not treat folder adjacency as proof of a call relationship.
-- Prefer exact `path:line` evidence gathered from search results or `scripts/collect_source_map.py`.
-- If you cannot confirm source or target locations, say so explicitly.
+- 不要只凭目录名推断功能。
+- 功能判断要用路由、命令注册、模块声明或其他入口证据支撑。
+- 不要把命名相似当成调用关系证据。
+- 不要把目录相邻当成调用关系证据。
+- 优先使用搜索结果或 `scripts/collect_source_map.py` 收集到的精确 `path:line` 证据。
+- 如果无法确认源位置或目标位置，要明确写出来。
 
 ## Navigation Block
 
-Every document except `00-project-map.md` must begin with:
+除了 `00-project-map.md` 之外，每个文档都必须以以下导航块开头：
 
-- current feature
-- current branch or topic
-- parent document path
-- 2-3 suggested next reading targets
+- 当前对象
+- 当前文档类型
+- 上级文档路径
+- 当前进入这一层的原因
+- 2-3 个下一步阅读目标
+
+## Naming Rules
+
+- 编号使用两位数字格式：`01`、`02`、`03`。
+- 默认文件名格式为 `<编号>-<父级功能>-and-<当前功能>.md`。
+- 父级功能写直接上级对象，例如 `03-agent-loop-and-tool-execution.md`。
+- 下一层继续拆时，新的父级功能切换为当前对象，例如 `04-tool-execution-and-tool-result-stitching.md`。
+- 不要把完整祖先链全部拼到文件名里，避免文件名无限增长。
 
 ## Final Annotation Step
 
-Before using `code-commenter`, produce a reading-first summary. Then ask whether to:
+在使用 `code-commenter` 之前，先给出“以阅读理解为主”的总结。然后询问用户是否要：
 
-- keep the annotation in the reading doc only
-- write comments into source files
-- do both
+- 只保留在阅读文档中
+- 写入源码注释
+- 两者都做
 
-Use `code-commenter` only after the user chooses an option that includes source edits.
+只有在用户选择包含源码修改的选项后，才能使用 `code-commenter`。

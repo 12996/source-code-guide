@@ -1,56 +1,85 @@
 # Source Code Guide
 
-[Chinese / 中文版](./README.zh-CN.md)
+[同内容副本](./README.zh-CN.md)
 
-`source-code-guide` is a Codex skill for reading unfamiliar codebases in stages instead of jumping straight into raw source.
+`source-code-guide` 是一个用于递归下钻理解陌生代码库的 Codex skill，重点是先建立项目级地图，再按复杂度持续拆解功能，直到对象已经收敛成一条主调用链，最后再进入具体代码区域。
 
-It helps an agent:
+它帮助 agent：
 
-- map major features in a project
-- trace one feature's main call chain
-- keep branch-level reading context while drilling deeper
-- produce focused code-reading docs before optionally adding source comments
+- 先整理项目的主要功能分组
+- 判断当前对象是否仍然需要继续成功能地图
+- 在合适的时机切换到调用链解释
+- 在继续下钻时保持编号式阅读上下文
+- 先生成聚焦的阅读文档，再决定是否把注释写回源码
 
-## What It Generates
+## 默认语言约束
 
-The skill writes reading artifacts under:
+- 对用户的过程说明、提问、总结默认使用中文
+- 生成的阅读文档默认使用中文
+- 仓库内说明文档使用中文记录
+- 只有在用户明确要求其他语言时才切换
+
+## 产出内容
+
+这个 skill 会把阅读材料写到：
 
 ```text
 docs/source-guides/<project-slug>/
   00-project-map.md
-  01-feature-<feature-name>.md
-  02-feature-<feature-name>-subchain.md
-  03-feature-<feature-name>-code-<topic>.md
+  01-project-and-<feature-name>.md
+  02-<parent>-and-<current>.md
+  03-<parent>-and-<current>.md
+  ...
 ```
 
-## Key Rules
+其中：
 
-- Cite evidence before claiming architecture.
-- Include `path:line` references for confirmed call points.
-- Use `unlocated` when a line number cannot be verified.
-- Keep uncertain claims in `Unconfirmed Points`.
-- Ask before writing comments into source files.
+- `00-project-map.md` 固定表示项目地图
+- 从 `01` 开始，编号只表示阅读顺序，不再绑定固定文档语义
+- `01+` 文件统一使用 `<编号>-<父级功能>-and-<当前功能>.md`
+- 文件名里的父级功能只写直接上级对象，不拼完整祖先链
 
-## Repository Layout
+## 递归工作流
 
-- `SKILL.md` - core workflow and hard rules
-- `references/templates.md` - markdown templates for generated guides
-- `scripts/collect_source_map.py` - helper for extracting stable `path:line` matches
-- `agents/openai.yaml` - UI-facing metadata
+1. 先生成 `00-project-map.md`，列出仓库主要功能。
+2. 用户选中某个功能后，判断它是否仍有并列子功能。
+3. 如果仍有并列子功能，继续生成下一层“功能拆解文档”。
+4. 如果已经没有并列子功能，只剩一条主流程，切换成“调用链解释文档”。
+5. 用户再选中调用链中的具体阶段或代码区域时，进入“代码精读文档”。
 
-## Quick Start
+切换标准不是编号，而是当前对象是否还能继续拆出并列子功能。
 
-Place this folder in your Codex skills directory and invoke it when you want to understand a new repository by feature map, branch navigation, and focused code reading.
+## 关键规则
 
-Example intents:
+- 先给证据，再描述架构
+- 已确认的关键调用点必须带 `path:line`
+- 行号无法确认时必须写 `unlocated`
+- 不确定的结论放进 `Unconfirmed Points`
+- 只要当前对象还有并列子功能，就继续做功能拆解
+- 只有当前对象已经收敛成单条主链时，才切换到调用链解释
+- 在把注释写回源码前必须先征得用户同意
 
-- "Help me understand the main features in this repository."
-- "Show me the key call chain for the login feature."
-- "I want to closely read the token validation code path."
+## 仓库结构
 
-## Helper Script
+- `SKILL.md`：skill 的核心流程和硬性规则
+- `references/templates.md`：生成阅读文档时使用的模板
+- `scripts/collect_source_map.py`：提取稳定 `path:line` 命中的辅助脚本
+- `agents/openai.yaml`：面向 UI 的元数据
 
-The helper script can locate literal text in one file and print stable `path:line` matches:
+## 快速开始
+
+把这个目录放进你的 Codex skills 目录，然后在你希望按“项目地图 -> 递归功能拆解 -> 调用链解释 -> 代码精读”的方式理解代码库时调用它。
+
+示例意图：
+
+- “帮我快速看懂这个仓库的主要功能。”
+- “先把 agent loop 这个功能继续拆开。”
+- “这个对象现在是不是已经可以按一条调用链来讲？”
+- “我想重点精读 tool_result stitching 这一段代码。”
+
+## 辅助脚本
+
+这个脚本可以在单个文件中查找字面文本，并输出稳定的 `path:line` 命中结果：
 
 ```bash
 python scripts/collect_source_map.py --file ./SKILL.md --find "## Core Rules"

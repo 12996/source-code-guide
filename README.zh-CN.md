@@ -1,57 +1,72 @@
 # Source Code Guide
 
-[English Version](./README.md)
+[同内容副本](./README.md)
 
-`source-code-guide` 是一个用于分阶段阅读陌生项目源码的 Codex skill，不鼓励一开始就直接钻进零散代码。
+`source-code-guide` 是一个用于递归下钻理解陌生代码库的 Codex skill，重点是先建立项目级地图，再按复杂度持续拆解功能，直到对象已经收敛成一条主调用链，最后再进入具体代码区域。
 
-它主要帮助 agent：
+## 默认语言约束
 
-- 先梳理项目的主要功能分组
-- 追踪某个功能的主调用链
-- 在逐层下钻时保持分支级阅读上下文
-- 在需要精读时先生成阅读文档，再决定是否把注释写回源码
+- 对用户的过程说明、提问、总结默认使用中文
+- 生成的阅读文档默认使用中文
+- 仓库内说明文档使用中文记录
+- 用户明确要求其他语言时再切换
 
-## 产出内容
+## 它解决什么问题
 
-这个 skill 会把阅读材料写到：
+- 避免凭目录名和文件邻近关系臆测架构
+- 把“项目地图、递归功能拆解、调用链解释、代码精读”拆成渐进式阅读过程
+- 在继续下钻时保留编号式阅读位置和下一步建议
+- 在写源码注释前，先产出面向理解的阅读材料
+
+## 产物目录
 
 ```text
 docs/source-guides/<project-slug>/
   00-project-map.md
-  01-feature-<feature-name>.md
-  02-feature-<feature-name>-subchain.md
-  03-feature-<feature-name>-code-<topic>.md
+  01-project-and-<feature-name>.md
+  02-<parent>-and-<current>.md
+  03-<parent>-and-<current>.md
+  ...
 ```
 
-## 关键规则
+其中：
 
-- 先给证据，再描述架构。
-- 已确认的关键调用点必须带 `path:line`。
-- 行号无法确认时必须写 `unlocated`，不能猜。
-- 不确定的结论要放进 `Unconfirmed Points`。
-- 写回源码注释前必须先询问用户。
+- `00-project-map.md` 固定表示项目地图
+- 从 `01` 开始，编号只表示阅读顺序，不再绑定固定文档语义
+- `01+` 文档统一使用 `<编号>-<父级功能>-and-<当前功能>.md`
+- 父级功能只写直接上级对象，不拼完整祖先链
 
-## 仓库结构
+## 递归工作流
 
-- `SKILL.md` - skill 的核心流程和硬规则
-- `references/templates.md` - 生成阅读文档时使用的模板
-- `scripts/collect_source_map.py` - 提取稳定 `path:line` 命中的辅助脚本
-- `agents/openai.yaml` - UI 侧元数据
+1. 先生成 `00-project-map.md`，列出仓库主要功能。
+2. 用户选中某个功能后，判断它是否仍有并列子功能。
+3. 如果仍有并列子功能，继续生成下一层“功能拆解文档”。
+4. 如果已经没有并列子功能，只剩一条主流程，切换成“调用链解释文档”。
+5. 用户继续进入调用链中的具体阶段或代码区域时，再生成“代码精读文档”。
 
-## 快速开始
+切换标准不是编号，而是当前对象是否仍然包含并列子功能。
 
-把这个目录放进你的 Codex skills 目录，然后在你想按“功能地图 -> 分支导航 -> 精读代码”方式理解一个仓库时调用它。
+## 核心规则
 
-示例意图：
+- 功能判断必须有入口证据支撑
+- 关键调用点必须标出 `path:line`
+- 无法确认行号时写 `unlocated`，不能猜
+- 不确定结论统一放入 `Unconfirmed Points`
+- 只要当前对象还有并列子功能，就继续做功能拆解
+- 只有当前对象已经收敛成单条主链时，才切换到调用链解释
+- 默认不改源码；需要写回注释时先征得用户同意
 
-- “帮我快速看懂这个仓库的主要功能。”
-- “给我登录功能的关键调用链。”
-- “我想重点精读 token 校验这一段代码。”
+## 仓库文件
 
-## 辅助脚本
+- `SKILL.md`：核心规则、工作流、文档要求
+- `references/templates.md`：默认输出模板
+- `scripts/collect_source_map.py`：稳定定位 `path:line` 的工具
+- `agents/openai.yaml`：skill 展示名称与默认提示
 
-这个辅助脚本可以在单个文件中查找字面文本，并输出稳定的 `path:line` 命中结果：
+## 使用场景
 
-```bash
-python scripts/collect_source_map.py --file ./SKILL.md --find "## Core Rules"
-```
+- “先给我一张这个仓库的功能地图。”
+- “先把 agent loop 这个功能继续拆开。”
+- “这个对象现在是不是已经可以按一条调用链来讲？”
+- “把 tool execution 这一层继续拆开。”
+- “我想读懂某段权限校验代码，但先不要动源码。”
